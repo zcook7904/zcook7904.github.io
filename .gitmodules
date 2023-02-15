@@ -1,0 +1,3 @@
+[submodule "pelican-plugins/pelican-jupyter"]
+	path = pelican-plugins/pelican-jupyter
+	url = https://github.com/danielfrg/pelican-jupyter/
