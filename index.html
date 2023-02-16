@@ -36,7 +36,7 @@
 <p>tags: <a href="/tag/sf-plum-finder.html">SF Plum Finder</a> </p>
 </footer><!-- /.post-info -->
 <h2>What is the San Francisco Plum Finder?</h2>
-<p><a href="/sf_plum_finder_app"> The SF Plum Finder</a> is a simple web app that allows a user to find the location of
+<p><a href="https://github.com/zcook7904/plum_finder"> SF Plum Finder</a> is a simple web app that allows a user to find the location of
     the nearest plum tree to a given address, either by using the SF_plum_finder python module, or by texting the address to a certain number connected to Twilio.
     This post is meant to give an overview of the program, with more focus applied to the data processing and python module.
     The program itself is written entirely in python and uses the googlemaps API for location services and the Twilio API to handle SMS reception and creation.
@@ -131,7 +131,7 @@ to trees with proper addresses, but not geolocations. This was accomplished by f
     That being said, after this initial processing I was finally ready to filter out the plum trees from the rest of the data.
     This was done simply enough using pandas .loc function to select trees with “plum”
     in the species names (but not “plume”).
-    Additionally, trees that were located in back or front yards were removed as well as trees that didn’t
+    Additionally, trees that were located in back or front yards were removed as well as trees that didn't
     have geolocations or valid addresses. Finally, the cleaned up, plum-only dataframe was saved as a new csv file to
     be used with the actual tree finder program.
 </p>
@@ -262,7 +262,7 @@ prevent accidental (or purposeful) spamming of the Google API. Additionally, a c
 implemented outside of user input errors being handled. I'd also like to move away from using the Google Maps API as much,
 something I believe can be achieved both by implementing a look-up of the
     <a href="https://data.sfgov.org/Geographic-Locations-and-Boundaries/Addresses-Enterprise-Addressing-System/3mea-di5p">San Francisco Address Database</a>,
-and by potentially using other geolocating API's. Finally, I would like to further research the effectiveness of approximating the walking distance
+and by potentially using other APIs for geolocation. Finally, I would like to further research the effectiveness of approximating the walking distance
 using geometric distance and where that works well or doesn't work within the city.</p>
                 </article>
             </aside><!-- /#featured -->
