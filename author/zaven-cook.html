@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="generator" content="Pelican" />
+        <title>ZavenCook.com - Zaven Cook</title>
+        <link rel="stylesheet" href="/theme/css/main.css" />
+</head>
+
+<body id="index" class="home">
+        <header id="banner" class="body">
+                <h1><a href="/">ZavenCook.com</a></h1>
+                <nav><ul>
+                    <li><a href="/category/about.html">About</a></li>
+                    <li><a href="/category/projects.html">Projects</a></li>
+                </ul></nav>
+        </header><!-- /#banner -->
+
+            <aside id="featured" class="body">
+                <article>
+                    <h1 class="entry-title"><a href="/san-francisco-plum-finder.html">San Francisco Plum Finder</a></h1>
+<footer class="post-info">
+        <abbr class="published" title="2022-10-24T22:28:00-07:00">
+                Published: Mon 24 October 2022
+        </abbr>
+		<br />
+        <abbr class="modified" title="2022-10-24T22:28:00-07:00">
+                Updated: Mon 24 October 2022
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="/author/zaven-cook.html">Zaven Cook</a>
+        </address>
+<p>In <a href="/category/projects.html">Projects</a>.</p>
+<p>tags: <a href="/tag/sf-plum-finder.html">SF Plum Finder</a> </p>
+</footer><!-- /.post-info -->
+<h2>What is the San Francisco Plum Finder?</h2>
+<p><a href="/sf_plum_finder_app"> The SF Plum Finder</a> is a simple web app that allows a user to find the location of
+    the nearest plum tree to a given address, either by using the SF_plum_finder python module, or by texting the address to a certain number connected to Twilio.
+    This post is meant to give an overview of the program, with more focus applied to the data processing and python module.
+    The program itself is written entirely in python and uses the googlemaps API for location services and the Twilio API to handle SMS reception and creation.
+    Additionally, I used pandas to process and work with the tree data.</p>
+    <p>
+        <img src="/sf_plum_finder_post/PlumFinderFlowChart.jpg" align="middle" alt="Basic Flow Chart of Plum Finder Program" />
+        <figcaption><em>A broad overview of SF Plum Finder</em></figcaption>
+    </p>
+<h2>The data</h2>
+<p>This project is only possible because of the <a href="https://data.sfgov.org/City-Infrastructure/Street-Tree-List/tkzw-k3nq">
+    SF Street Tree List</a> hosted on <a href="https://datasf.org/"> dataSF.org</a>.
+    The SF Street Tree list contains over 196,000 (!) trees and includes addresses, species, geolocations (latitude and longitude),
+    and where at the address the tree is located (front yard, sidewalk, etc.) for most trees in the database,
+    along with some other information that are less useful for this application. </p>
+<p>
+    <img src="/sf_plum_finder_post/SFTreeDataHead.png" align="middle" alt="The first few columns of SF Street Tree List" />
+    <figcaption><em>A few columns of the SF Street Tree List shown in Excel with some less useful columns hidden</em></figcaption>
+
+<p>It was immediately noticeable that a lot of the data were missing geolocation (latitude and longitude),
+    even though they were not missing an address. An important part of the algorithm I developed to find the closest
+    plum tree required not just the address, but the geolocation as well. I made a quick function that used Google Maps API to add the geolocation
+to trees with proper addresses, but not geolocations. This was accomplished by first selecting all trees with null geolocations
+    and non-null addresses, and then further filtering out street addresses that were not related to an actual geolocation, such as "STAIRWAY":</p>
+<p>
+    <img src="/sf_plum_finder_post/add_geolocation_filter.PNG" align="middle" alt="Pandas codes to filter trees appropriate for adding geolocation" />
+    <figcaption><em>Filtering out inappropriate addresses</em></figcaption>
+</p> <p></p>
+<p>
+    Now that I had a series of addresses without geolocations, getting the geolocations was as simple as iterating through this series, sending the
+    address to the Google Maps' client library "get_geolocation" function, and saving the treeID and new geocoordinates to an empty data frame made earlier:
+</p>
+<p>
+    <img src="/sf_plum_finder_post/add_geolocation.PNG" align="middle" alt="Code to get geolocation from address and save to dataframe" />
+    <figcaption><em>Getting geolocation from address</em></figcaption>
+
+<p>
+    Important to note in the above code is the "changes" variable. The purpose of this variable was to keep track of the number of google API calls.
+    After a certain number (typically 1000), the program asks the user if they want to continue adding geolocations. If the user inputs "n", the function ends.
+    This was to protect myself from obscene google API bills if there was any bug in the function, or
+    if in the future different data is used with the function that has an unexpectedly large amount of addresses the geolocation can be applied to.
+    In this case, the number of addresses the geolocation was added to was just under 500.
+</p>
+
+<p>
+    Finally, the original dataframe is updated with the new added geolocations:
+</p>
+<p>
+    <img src="/sf_plum_finder_post/update_geolocation.PNG" align="middle" alt="Code to update geolocations and return updated dataframe" />
+    <figcaption><em>Updating the dataframe with added geolocations</em></figcaption>
+</p>
+<p>
+    Next, a similar procedure was followed to add addresses to trees that had geolocations but not addresses.
+    This process was more straightforward, as the geolocations were assumed to be correct if the address was missing.
+    After filtering to only include trees with geolocations but not addresses, a simple map was applied that mapped addresses
+    retrieved from Google Maps' reverse geocode API housed in the 'get_address' function:
+</p>
+<p>
+    <img src="/sf_plum_finder_post/add_addresses.PNG" align="middle" alt="Code to map addresses to trees that are missing them" />
+    <figcaption><em>Adding addresses</em></figcaption>
+</p>
+<p>
+    The final cleaning applied to all the data was implemented after looking into the data further.
+    While checking to see if the geolocation and address adding were working properly,
+    I noticed there were many trees with the same address but with geolocations over 5000m away from each other:
+</p>
+<p>
+    <img src="{{url_for('static', filename='sf_plum_finder_post/check_geocodes.PNG" align="middle" alt="Inspecting geocodes" />
+    <figcaption><em>Inspecting geocodes</em></figcaption>
+</p>
+<p>
+    After applying the same check to the original data to make sure the error was in the data and not my code,
+    I entered the geolocations into Google Maps and determined that in every case one of the trees had a matching
+    address and geolocation, while the other’s geolocation indicated a completely different address.
+    Consequently, I assumed the geolocations were correct and the addresses had been entered incorrectly.
+    I filtered the addresses with probable incorrect addresses similarly to above by:
+</p>
+<p>
+    <img src="/sf_plum_finder_post/getting_bad_addresses.PNG" align="middle" alt="Inspecting geocodes" />
+    <figcaption><em>Inspecting geocodes</em></figcaption>
+</p>
+<p>
+    And then mapped the correct address from Google Maps to every tree in the filtered list in the same manner as above.
+</p>
+<p>
+    At this point, it’s important to note that for this specific application it was unnecessary to apply these functions
+    to the total SF Street Tree data. I could've saved some computation time and filtered out the plums from the data first.
+    While the program would’ve run faster and less
+    Google Maps API budget would’ve been used, I wanted to have all the data as clean as possible for later projects
+    and further analysis.
+</p>
+<p>
+    That being said, after this initial processing I was finally ready to filter out the plum trees from the rest of the data.
+    This was done simply enough using pandas .loc function to select trees with “plum”
+    in the species names (but not “plume”).
+    Additionally, trees that were located in back or front yards were removed as well as trees that didn’t
+    have geolocations or valid addresses. Finally, the cleaned up, plum-only dataframe was saved as a new csv file to
+    be used with the actual tree finder program.
+</p>
+<h2>The plum finding program</h2>
+<p>
+The basic sequence of the program is as follows:
+<ol>
+    <li>The user inputs a street address</li>
+<li>The program checks if the address is acceptable, i.e. it:
+    <ol>
+    <li>Ensures the address has all the required components (street number, street name, street suffix) and</li>
+    <li>That the street exists in San Francisco</li>
+        </ol>
+<li>Converts the address to a geolocation using Google Maps trusty geocode API</li>
+<li>Computes the geometric distance from that geolocation to every tree in the dataframe</li>
+<li>Selects the n (in this case 5) closest trees from the dataframe</li>
+<li>Sends these 5 trees addresses to Google Map’s distance matrix API to get the actual distances and</li>
+<li>Finally, returns the actual closest tree to the user</li>
+</ol>
+</p>
+<p>
+    Specifically, a street address is passed to the programs main function, where it is converted to an address dataclass that
+    allows all the components of the address (the street number, street name, full address, latitude and longitude, etc.)
+    to be stored in one place and accessed easily.
+</p>
+<p>
+    <img src="/sf_plum_finder_post/address_dataclass.PNG" align="middle" alt="Address dataclass initiation" />
+    <figcaption><em>The initiation portion of the address dataclass</em></figcaption>
+</p>
+<p>
+    This address then is passed to a processing function that ensures the address is valid
+    for San Francisco. It does so by first ensuring the number of 'components' of the address are at least 3 --
+    street number, street name, and street type -- and then ensuring the street number is an integer and that the
+    street name is in the SF_street_names database. Great care is taken here in order to minimize calls to the Google Maps API with
+    improper addresses.
+</p>
+<p>
+    Next, Google Maps is used to assign a latitude and longitude to the address just as it was done when processing the tree data.
+    With the geolocation assigned to the address, it is now trivial to use numpy to compute the geometric distance to each plum tree from
+    the inputted location:
+</p>
+<p>
+    <img src="/sf_plum_finder_post/geometric_distance_calc.PNG" align="middle" alt="Geometric distance calculation" />
+    <figcaption><em>Calculating the geometric distance to every plum tree</em></figcaption>
+</p>
+<p>
+    This calculation serves as an approximation of the walking distance to every plum tree in San Francisco. This is an important step,
+    as Google Maps distance matrix only allows up to 25 destinations per API call. Without this initial approximation,
+    it would take almost 270 API calls to determine the distance to each tree using Google Maps. Even with asynchronous calls,
+    this would be orders of magnitude slower (and more expensive) than the approximation approach.
+</p>
+<p>
+    Instead of doing this, the distance is approximated and the n <= 25 geometrically closest plum trees are passed to
+    the Google Maps API. I performed some experimentation on what number of possible closest locations needed to be passed
+    to the API to include the actual closest by walking distance. I found that the closest geographically was typically at worst the
+    second or third closest geometrically. Even so, more testing is needed to see how true this actually is, and even if
+    25 trees are needed to always return the actual closest result, any number of trees less than 26 has a negligibly different computational cost.
+</p>
+<p>
+    Regardless, the addresses of the trees approximated as closest are passed to Google Maps distance matrix API along with the inputted
+    address. The API, aptly named, returns a matrix of distances from the origin point to the passed destination points.
+    The distances are returned in the same order they are passed, so it is simple enough to then match the addresses to the distances:
+</p>
+<p>
+    <img src="/sf_plum_finder_post/distance_matrix.PNG" align="middle" alt="Distance matrix call" />
+    <figcaption><em>Getting the walking distance to every tree</em></figcaption>
+</p>
+<p>
+    This list is sorted by distance and the address to the corresponding shortest distance is then used to query the
+    plum tree dataframe for the tree itself.
+    This tree is returned as a dictionary to later be formatted in whatever means deemed necessary:
+</p>
+<p>
+    <img src="/sf_plum_finder_post/make_response.PNG" align="middle" alt="Returning the closest tree" />
+    <figcaption><em>Returning the closest tree</em></figcaption>
+</p>
+<p>
+    Sorting is unnecessary for the program, but was done to perform later analysis on the difference between the
+    approximated and actual closest tree.
+</p>
+<p>
+    Regardless, the actual plum finding portion of the program was complete and could be tested through a simple command line interface:
+</p>
+<p>
+    <img src="/sf_plum_finder_post/command_line_interface.PNG" align="middle" alt="Command line interface working" />
+    <figcaption><em>Plum found!</em></figcaption>
+</p>
+<h2>SMS Interface</h2>
+<p>
+    The final component of the program was the SMS interface. This was achieved fairly simply by using Twilio and flask.
+    First, I set up a flask application that accepted POST requests and, if the request was a proper address (see above),
+    returned the closest plum tree in response.
+</p>
+<p>
+    To make development easier, I decided the plum finding portion of the program would be its own python module that the
+    flask application/web server would install separately. This way, I could make changes to the plum finding portion on
+    my own computer and then update the module on the server using pip.
+</p>
+<p>
+    I also decided to host the app (really a router) as part of this website on <a href="https://www.pythonanywhere.com/">pythonanywhere.com</a>,
+    as the server was very easy to set up and was already configured to run python.
+</p>
+<p>
+    The mechanism of the SMS portion operates like this:
+    <ol>
+    <li>First, the user sends a text to a predetermined number connected to my Twilio account</li>
+    <li>Twilio then makes a post request to the http address I have configured on the server with the users message and
+        some other information as the body of the request</li>
+    <li>The server then ensures the phone number that sent an SMS to Twilio is whitelisted</li>
+    <li>And then finally passes the body of the message (what the users text) to the main SF_plum_finder function and</li>
+    <li>Returns to the original user whatever the function returns, with some additional error handling</li>
+</ol>
+</p>
+<p>
+    All together the end results looks like this:
+</p>
+<p>
+    <img src="/sf_plum_finder_post/final_result.PNG" align="middle" alt="SMS final result" width="600px" />
+    <figcaption><em>SMS interface working</em></figcaption>
+
+</p>
+<break></break>
+<h2>Final notes</h2>
+<p>While the program itself works as I initially intended it, there are still a lot of features missing that could be added in the future,
+as well as some improvements to the program itself. First, a lot of the functionality of the whitelist needs to be fleshed out.
+This includes granting access levels and logging the number of times a user uses the service and some more safeguards to
+prevent accidental (or purposeful) spamming of the Google API. Additionally, a complete means of error logging is yet to be
+implemented outside of user input errors being handled. I'd also like to move away from using the Google Maps API as much,
+something I believe can be achieved both by implementing a look-up of the
+    <a href="https://data.sfgov.org/Geographic-Locations-and-Boundaries/Addresses-Enterprise-Addressing-System/3mea-di5p">San Francisco Address Database</a>,
+and by potentially using other geolocating API's. Finally, I would like to further research the effectiveness of approximating the walking distance
+using geometric distance and where that works well or doesn't work within the city.</p>
+                </article>
+            </aside><!-- /#featured -->
+                <section id="content" class="body">
+                    <h1>Other articles</h1>
+                    <hr />
+                    <ol id="posts-list" class="hfeed">
+
+            <li><article class="hentry">
+                <header>
+                    <h1><a href="/about-me.html" rel="bookmark"
+                           title="Permalink to About Me">About Me</a></h1>
+                </header>
+
+                <div class="entry-content">
+<footer class="post-info">
+        <abbr class="published" title="2022-10-10T00:00:00-07:00">
+                Published: Mon 10 October 2022
+        </abbr>
+
+        <address class="vcard author">
+                By                         <a class="url fn" href="/author/zaven-cook.html">Zaven Cook</a>
+        </address>
+<p>In <a href="/category/about.html">About</a>.</p>
+
+</footer><!-- /.post-info -->                <p>My name is Zaven Cook and I work as a junior Mechanical Engineer in EXP's San Francisco Office. At EXP, I design HVAC systems for science and tech companies.</p>
+<p>I graduated from Clemson University in 2020 with a Bachelor of Science in Mechanical Engineering, in addition to a minor in …</p>
+                <a class="readmore" href="/about-me.html">read more</a>
+                </div><!-- /.entry-content -->
+            </article></li>
+                </ol><!-- /#posts-list -->
+                </section><!-- /#content -->
+        <section id="extras" class="body">
+                <div class="blogroll">
+                        <h2>links</h2>
+                        <ul>
+                            <li><a href="mailto::ZavenCook@gmail.com">Email Me</a></li>
+                            <li><a href="https://www.linkedin.com/in/zaven-cook/">LinkedIn</a></li>
+                            <li><a href="https://github.com/zcook7904">Github</a></li>
+                        </ul>
+                </div><!-- /.blogroll -->
+        </section><!-- /#extras -->
+
+        <footer id="contentinfo" class="body">
+                <address id="about" class="vcard body">
+                Proudly powered by <a href="https://getpelican.com/">Pelican</a>, which takes great advantage of <a href="https://www.python.org/">Python</a>.
+                </address><!-- /#about -->
+
+                <p>The theme is by <a href="https://www.smashingmagazine.com/2009/08/designing-a-html-5-layout-from-scratch/">Smashing Magazine</a>, thanks!</p>
+        </footer><!-- /#contentinfo -->
+
+</body>
+</html>
