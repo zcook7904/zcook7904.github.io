@@ -149,11 +149,11 @@ The basic sequence of the program is as follows:
 <li>The program checks if the address is acceptable, i.e. it:
     <ol>
     <li>Ensures the address has all the required components (street number, street name, street suffix) and</li>
-    <li>That the street exists in San Francisco</li>
+    <li>Checks that the street exists in San Francisco</li>
         </ol>
-<li>Converts the address to a geolocation using Google Maps trusty geocode API</li>
-<li>Computes the geometric distance from that geolocation to every tree in the dataframe</li>
-<li>Selects the n (in this case 5) closest trees from the dataframe</li>
+<li>It then converts the address to a geolocation using Google Maps trusty geocode API,</li>
+<li>Computes the geometric distance from that geolocation to every tree in the dataframe,</li>
+<li>Selects the n (in this case 5) closest trees from the dataframe,</li>
 <li>Sends these 5 trees addresses to Google Map’s distance matrix API to get the actual distances and</li>
 <li>Finally, returns the actual closest tree to the user</li>
 </ol>
@@ -194,7 +194,7 @@ The basic sequence of the program is as follows:
     the Google Maps API. I performed some experimentation on what number of possible closest locations needed to be passed
     to the API to include the actual closest by walking distance. I found that the closest geographically was typically at worst the
     second or third closest geometrically. Even so, more testing is needed to see how true this actually is, and even if
-    25 trees are needed to always return the actual closest result, any number of trees less than 26 has a negligibly different computational cost.
+    25 trees are needed to always return the actual closest result, any number of trees less than 26 has a negligible difference in computational cost.
 </p>
 <p>
     Regardless, the addresses of the trees approximated as closest are passed to Google Maps distance matrix API along with the inputted
